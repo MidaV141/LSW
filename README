@@ -18,13 +18,11 @@ LSW
 Клонирование репозитория
 
 bash
-Копировать код
 git clone https://github.com/username/project-name.git
 cd project-name
 Запуск скрипта установки
 
 bash
-Копировать код
 chmod +x setup.sh
 ./setup.sh
 Скрипт установки выполнит следующие действия:
@@ -38,7 +36,6 @@ chmod +x setup.sh
 Запуск основного скрипта
 
 bash
-Копировать код
 chmod +x main.sh
 ./main.sh
 Этот скрипт будет следить за новыми .exe файлами в каталоге загрузок и автоматически переносить их на виртуальную машину, создавая соответствующие ярлыки на рабочем столе.
@@ -48,7 +45,6 @@ windows-vm.service
 Этот файл systemd службы отвечает за автоматический запуск и остановку виртуальной машины.
 
 ini
-Копировать код
 [Unit]
 Description=Windows VM autostart
 After=network.target
@@ -65,7 +61,6 @@ exe-monitor.service
 Этот файл systemd службы отвечает за мониторинг новых exe файлов и их обработку.
 
 ini
-Копировать код
 [Unit]
 Description=Monitor new exe files and handle them
 After=network.target windows-vm.service
