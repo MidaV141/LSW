@@ -1,0 +1,12 @@
+[Unit]
+Description=Windows VM autostart
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/virsh start windows-vm
+ExecStop=/usr/bin/virsh shutdown windows-vm
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

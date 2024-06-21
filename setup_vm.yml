@@ -1,0 +1,41 @@
+---
+- name: Настройка виртуальной машины Windows
+  hosts: windows
+  tasks:
+    - name: Создание пользователя и настройка ключей SSH
+      win_user:
+        name: ansible
+        password: securepassword
+        groups: Administrators
+
+    - name: Настройка SSH
+      win_copy:
+        content: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+        dest: "C:\\Users\\ansible\\.ssh\\authorized_keys"
+
+    - name: Установка и настройка RDP
+      win_feature:
+        name: RDS-RD-Server
+        state: present
+
+    - name: Разрешение RDP через брандмауэр
+      win_firewall_rule:
+        name: 'RDP'
+        enable: yes
+        direction: in
+        action: allow
+        localport: 3389
+        protocol: TCP
+
+    - name: Обновление реестра для разрешения RDP
+      win_regedit:
+        path: HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server
+        name: fDenyTSConnections
+        data: 0
+        type: dword
+
+    - name: Перезапуск службы RDP
+      win_service:
+        name: TermService
+        start_mode: auto
+        state: started

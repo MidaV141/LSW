@@ -1,0 +1,2 @@
+[windows]
+windows-vm ansible_host=192.168.122.2 ansible_user=Administrator ansible_password=securepassword ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_server_cert_validation=ignore

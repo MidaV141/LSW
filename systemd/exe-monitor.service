@@ -1,0 +1,11 @@
+[Unit]
+Description=Monitor new exe files and handle them
+After=network.target windows-vm.service
+
+[Service]
+Type=simple
+ExecStart=/path/to/your/main.sh
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
