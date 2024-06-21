@@ -74,6 +74,7 @@ WantedBy=multi-user.target
 ```
 exe-monitor.service
 Этот файл systemd службы отвечает за мониторинг новых exe файлов и их обработку.
+
 ```ini
 [Unit]
 Description=Monitor new exe files and handle them
