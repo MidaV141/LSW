@@ -7,15 +7,15 @@
             <InputLocale>en-US</InputLocale>
             <SystemLocale>en-US</SystemLocale>
             <UILanguage>en-US</UILanguage>
+            <UILanguageFallback>en-US</UILanguageFallback>
             <UserLocale>en-US</UserLocale>
         </component>
         <component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
             <UserData>
                 <AcceptEula>true</AcceptEula>
                 <FullName>Windows User</FullName>
-                <Organization>MyOrganization</Organization>
+                <Organization>Organization</Organization>
                 <ProductKey>
-                    <WillShowUI>OnError</WillShowUI>
                     <Key></Key>
                 </ProductKey>
             </UserData>
@@ -23,8 +23,8 @@
                 <OSImage>
                     <InstallFrom>
                         <MetaData wcm:action="add">
-                            <Key>/image/index</Key>
-                            <Value>1</Value>
+                            <Key>/IMAGE/NAME</Key>
+                            <Value>Windows 10 Pro</Value>
                         </MetaData>
                     </InstallFrom>
                     <InstallTo>
@@ -33,20 +33,42 @@
                     </InstallTo>
                 </OSImage>
             </ImageInstall>
-        </component>
-    </settings>
-    <settings pass="specialize">
-        <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
-            <InputLocale>en-US</InputLocale>
-            <SystemLocale>en-US</SystemLocale>
-            <UILanguage>en-US</UILanguage>
-            <UserLocale>en-US</UserLocale>
-        </component>
-        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
-            <ComputerName>WindowsVM</ComputerName>
-            <TimeZone>Pacific Standard Time</TimeZone>
-            <RegisteredOwner>Windows User</RegisteredOwner>
-            <RegisteredOrganization>MyOrganization</RegisteredOrganization>
+            <DiskConfiguration>
+                <Disk wcm:action="add">
+                    <DiskID>0</DiskID>
+                    <WillWipeDisk>true</WillWipeDisk>
+                    <CreatePartitions>
+                        <CreatePartition wcm:action="add">
+                            <Order>1</Order>
+                            <Type>Primary</Type>
+                            <Size>100</Size>
+                        </CreatePartition>
+                        <CreatePartition wcm:action="add">
+                            <Order>2</Order>
+                            <Type>Primary</Type>
+                            <Extend>true</Extend>
+                        </CreatePartition>
+                    </CreatePartitions>
+                    <ModifyPartitions>
+                        <ModifyPartition wcm:action="add">
+                            <Active>true</Active>
+                            <Format>NTFS</Format>
+                            <Label>System</Label>
+                            <Order>1</Order>
+                            <PartitionID>1</PartitionID>
+                        </ModifyPartition>
+                        <ModifyPartition wcm:action="add">
+                            <Format>NTFS</Format>
+                            <Label>Windows</Label>
+                            <Order>2</Order>
+                            <PartitionID>2</PartitionID>
+                        </ModifyPartition>
+                    </ModifyPartitions>
+                </Disk>
+            </DiskConfiguration>
+            <WindowsPE>
+                <DisableFirewall>true</DisableFirewall>
+            </WindowsPE>
         </component>
     </settings>
     <settings pass="oobeSystem">
@@ -60,34 +82,29 @@
             <OOBE>
                 <HideEULAPage>true</HideEULAPage>
                 <NetworkLocation>Work</NetworkLocation>
-                <ProtectYourPC>1</ProtectYourPC>
+                <ProtectYourPC>3</ProtectYourPC>
             </OOBE>
             <UserAccounts>
                 <AdministratorPassword>
-                    <Value>Password123!</Value>
+                    <Value>AdministratorPassword123!</Value>
                     <PlainText>true</PlainText>
                 </AdministratorPassword>
                 <LocalAccounts>
                     <LocalAccount wcm:action="add">
                         <Password>
-                            <Value>Password123!</Value>
+                            <Value>localuserpassword</Value>
                             <PlainText>true</PlainText>
                         </Password>
-                        <Description>Local user account</Description>
+                        <Description>Local User Account</Description>
                         <DisplayName>localuser</DisplayName>
                         <Group>Administrators</Group>
                         <Name>localuser</Name>
                     </LocalAccount>
                 </LocalAccounts>
             </UserAccounts>
-            <AutoLogon>
-                <Password>
-                    <Value>Password123!</Value>
-                    <PlainText>true</PlainText>
-                </Password>
-                <Username>localuser</Username>
-                <Enabled>true</Enabled>
-            </AutoLogon>
+            <RegisteredOrganization>Organization</RegisteredOrganization>
+            <RegisteredOwner>Windows User</RegisteredOwner>
+            <TimeZone>UTC</TimeZone>
         </component>
     </settings>
 </unattend>
