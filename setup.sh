@@ -61,6 +61,10 @@ sshpass -p "$RDP_PASS" ssh-copy-id -o StrictHostKeyChecking=no "$RDP_USER@192.16
 ssh "$RDP_USER@192.168.122.2" <<EOF
 reg add "HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Control\\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
 netsh advfirewall firewall set rule group="remote desktop" new enable=Yes
+
+# Установка запуска команд с правами администратора без запроса UAC
+reg add "HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System" /v ConsentPromptBehaviorAdmin /t REG_DWORD /d 0 /f
+reg add "HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System" /v EnableLUA /t REG_DWORD /d 0 /f
 EOF
 
 # Настройка общей папки
