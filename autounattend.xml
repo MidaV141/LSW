@@ -1,110 +1,113 @@
 <unattend xmlns="urn:schemas-microsoft-com:unattend">
-    <settings pass="windowsPE">
-        <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
-            <SetupUILanguage>
-                <UILanguage>en-US</UILanguage>
-            </SetupUILanguage>
-            <InputLocale>en-US</InputLocale>
-            <SystemLocale>en-US</SystemLocale>
-            <UILanguage>en-US</UILanguage>
-            <UILanguageFallback>en-US</UILanguageFallback>
-            <UserLocale>en-US</UserLocale>
-        </component>
-        <component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
-            <UserData>
-                <AcceptEula>true</AcceptEula>
-                <FullName>Windows User</FullName>
-                <Organization>Organization</Organization>
-                <ProductKey>
-                    <Key></Key>
-                </ProductKey>
-            </UserData>
-            <ImageInstall>
-                <OSImage>
-                    <InstallFrom>
-                        <MetaData wcm:action="add">
-                            <Key>/IMAGE/NAME</Key>
-                            <Value>Windows 10 Pro</Value>
-                        </MetaData>
-                    </InstallFrom>
-                    <InstallTo>
-                        <DiskID>0</DiskID>
-                        <PartitionID>1</PartitionID>
-                    </InstallTo>
-                </OSImage>
-            </ImageInstall>
-            <DiskConfiguration>
-                <Disk wcm:action="add">
-                    <DiskID>0</DiskID>
-                    <WillWipeDisk>true</WillWipeDisk>
-                    <CreatePartitions>
-                        <CreatePartition wcm:action="add">
-                            <Order>1</Order>
-                            <Type>Primary</Type>
-                            <Size>100</Size>
-                        </CreatePartition>
-                        <CreatePartition wcm:action="add">
-                            <Order>2</Order>
-                            <Type>Primary</Type>
-                            <Extend>true</Extend>
-                        </CreatePartition>
-                    </CreatePartitions>
-                    <ModifyPartitions>
-                        <ModifyPartition wcm:action="add">
-                            <Active>true</Active>
-                            <Format>NTFS</Format>
-                            <Label>System</Label>
-                            <Order>1</Order>
-                            <PartitionID>1</PartitionID>
-                        </ModifyPartition>
-                        <ModifyPartition wcm:action="add">
-                            <Format>NTFS</Format>
-                            <Label>Windows</Label>
-                            <Order>2</Order>
-                            <PartitionID>2</PartitionID>
-                        </ModifyPartition>
-                    </ModifyPartitions>
-                </Disk>
-            </DiskConfiguration>
-            <WindowsPE>
-                <DisableFirewall>true</DisableFirewall>
-            </WindowsPE>
-        </component>
-    </settings>
-    <settings pass="oobeSystem">
-        <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
-            <InputLocale>en-US</InputLocale>
-            <SystemLocale>en-US</SystemLocale>
-            <UILanguage>en-US</UILanguage>
-            <UserLocale>en-US</UserLocale>
-        </component>
-        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
-            <OOBE>
-                <HideEULAPage>true</HideEULAPage>
-                <NetworkLocation>Work</NetworkLocation>
-                <ProtectYourPC>3</ProtectYourPC>
-            </OOBE>
-            <UserAccounts>
-                <AdministratorPassword>
-                    <Value>AdministratorPassword123!</Value>
-                    <PlainText>true</PlainText>
-                </AdministratorPassword>
-                <LocalAccounts>
-                    <LocalAccount wcm:action="add">
-                        <Password>
-                            <Value>localuserpassword</Value>
-                            <PlainText>true</PlainText>
-                        </Password>
-                        <Description>Local User Account</Description>
-                        <DisplayName>localuser</DisplayName>
-                        <Group>Administrators</Group>
-                        <Name>localuser</Name>
-                    </LocalAccount>
-                </LocalAccounts>
-            </UserAccounts>
-            <RegisteredOrganization>Organization</RegisteredOrganization>
-            <RegisteredOwner>Windows User</RegisteredOwner>
-            <TimeZone>UTC</TimeZone>
-        </component>
-    </settings>
+  <settings pass="windowsPE">
+    <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <SetupUILanguage>
+        <UILanguage>ru-RU</UILanguage>
+      </SetupUILanguage>
+      <InputLocale>ru-RU</InputLocale>
+      <SystemLocale>ru-RU</SystemLocale>
+      <UILanguage>ru-RU</UILanguage>
+      <UserLocale>ru-RU</UserLocale>
+    </component>
+    <component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <DiskConfiguration>
+        <Disk wcm:action="add">
+          <DiskID>0</DiskID>
+          <WillWipeDisk>true</WillWipeDisk>
+          <CreatePartitions>
+            <CreatePartition>
+              <Order>1</Order>
+              <Type>Primary</Type>
+              <Size>100</Size>
+            </CreatePartition>
+            <CreatePartition>
+              <Order>2</Order>
+              <Type>Primary</Type>
+              <Extend>true</Extend>
+            </CreatePartition>
+          </CreatePartitions>
+        </Disk>
+      </DiskConfiguration>
+      <ImageInstall>
+        <OSImage>
+          <InstallFrom>
+            <MetaData wcm:action="add">
+              <Key>/image/index</Key>
+              <Value>1</Value>
+            </MetaData>
+          </InstallFrom>
+          <InstallTo>
+            <DiskID>0</DiskID>
+            <PartitionID>2</PartitionID>
+          </InstallTo>
+          <InstallToAvailablePartition>false</InstallToAvailablePartition>
+          <WillShowUI>OnError</WillShowUI>
+        </OSImage>
+      </ImageInstall>
+      <UserData>
+        <AcceptEula>true</AcceptEula>
+        <FullName>Пользователь</FullName>
+        <Organization>МояОрганизация</Organization>
+      </UserData>
+    </component>
+  </settings>
+  <settings pass="specialize">
+    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <ComputerName>WindowsVM</ComputerName>
+      <TimeZone>Russian Standard Time</TimeZone>
+    </component>
+    <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <InputLocale>ru-RU</InputLocale>
+      <SystemLocale>ru-RU</SystemLocale>
+      <UILanguage>ru-RU</UILanguage>
+      <UserLocale>ru-RU</UserLocale>
+    </component>
+  </settings>
+  <settings pass="oobeSystem">
+    <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <InputLocale>ru-RU</InputLocale>
+      <SystemLocale>ru-RU</SystemLocale>
+      <UILanguage>ru-RU</UILanguage>
+      <UserLocale>ru-RU</UserLocale>
+    </component>
+    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <OOBE>
+        <HideEULAPage>true</HideEULAPage>
+        <NetworkLocation>Work</NetworkLocation>
+        <ProtectYourPC>3</ProtectYourPC>
+        <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+        <SkipMachineOOBE>true</SkipMachineOOBE>
+        <SkipUserOOBE>true</SkipUserOOBE>
+      </OOBE>
+      <UserAccounts>
+        <AdministratorPassword>
+          <Value>Password123!</Value>
+          <PlainText>true</PlainText>
+        </AdministratorPassword>
+        <LocalAccounts>
+          <LocalAccount wcm:action="add">
+            <Password>
+              <Value>Password123!</Value>
+              <PlainText>true</PlainText>
+            </Password>
+            <Description>Локальный пользователь</Description>
+            <DisplayName>localuser</DisplayName>
+            <Group>Administrators</Group>
+            <Name>localuser</Name>
+          </LocalAccount>
+        </LocalAccounts>
+      </UserAccounts>
+      <AutoLogon>
+        <Password>
+          <Value>Password123!</Value>
+          <PlainText>true</PlainText>
+        </Password>
+        <Enabled>true</Enabled>
+        <Username>localuser</Username>
+      </AutoLogon>
+      <RegisteredOrganization>МояОрганизация</RegisteredOrganization>
+      <RegisteredOwner>Пользователь</RegisteredOwner>
+      <TimeZone>Russian Standard Time</TimeZone>
+    </component>
+  </settings>
 </unattend>
