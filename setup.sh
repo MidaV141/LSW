@@ -2,20 +2,25 @@
 
 # Переменные
 VM_NAME="windows-vm"
-ISO_PATH="/path/to/windows10.iso"
-AUTOUNATTEND_XML="/path/to/autounattend.xml"
+MODIFIED_ISO="windows10_autounattend.iso"
 RDP_USER="localuser"
 RDP_PASS="Password123!"
 WATCH_DIR="$HOME/Downloads"
 SHARE_FOLDER="$HOME/shared"
 VM_DISK="$HOME/${VM_NAME}.qcow2"
+CHECK_INTERVAL=60  # Интервал проверки состояния установки в секундах
+TIMEOUT=3600       # Таймаут в секундах (1 час)
 
 # Установка необходимых пакетов
 sudo apt-get update
-sudo apt-get install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils virt-manager sshpass inotify-tools xfreerdp
+sudo apt-get install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils virt-manager sshpass inotify-tools freerdp2-x11 ansible genisoimage
 
-# Настройка сети NAT для виртуальной машины
-sudo tee /etc/libvirt/qemu/networks/default.xml > /dev/null <<EOL
+# Добавление пользователя в группу libvirt
+sudo usermod -aG libvirt $(whoami)
+
+# Настройка сети NAT для виртуальной машины (если не существует)
+if ! virsh net-list --all | grep -q 'default'; then
+    tee /etc/libvirt/qemu/networks/default.xml > /dev/null <<EOL
 <network>
   <name>default</name>
   <forward mode='nat'/>
@@ -28,9 +33,13 @@ sudo tee /etc/libvirt/qemu/networks/default.xml > /dev/null <<EOL
 </network>
 EOL
 
-sudo virsh net-define /etc/libvirt/qemu/networks/default.xml
-sudo virsh net-start default
-sudo virsh net-autostart default
+    virsh net-define /etc/libvirt/qemu/networks/default.xml
+    virsh net-start default
+else
+    echo "Network default already exists"
+fi
+
+virsh net-autostart default
 
 # Создание образа диска для виртуальной машины
 qemu-img create -f qcow2 "$VM_DISK" 50G
@@ -45,27 +54,82 @@ virt-install \
   --network network=default \
   --graphics vnc \
   --disk path="$VM_DISK",format=qcow2 \
-  --cdrom "$ISO_PATH" \
-  --disk path="$AUTOUNATTEND_XML",device=cdrom \
-  --extra-args "autounattend=$AUTOUNATTEND_XML"
+  --cdrom "$MODIFIED_ISO" \
+  --noautoconsole
 
-# Ожидание завершения установки Windows (максимум 30 минут)
-echo "Ожидание завершения установки Windows (до 30 минут)..."
-sleep 1800
+# Ожидание завершения установки Windows (максимум 1 час)
+echo "Ожидание завершения установки Windows (до 1 часа)..."
+START_TIME=$(date +%s)
+
+while true; do
+  # Проверка, что виртуальная машина запущена
+  VM_STATE=$(virsh domstate "$VM_NAME")
+  
+  if [ "$VM_STATE" == "running" ]; then
+    echo "Виртуальная машина все еще устанавливается..."
+  else
+    echo "Установка завершена."
+    break
+  fi
+
+  # Проверка таймаута
+  CURRENT_TIME=$(date +%s)
+  ELAPSED_TIME=$((CURRENT_TIME - START_TIME))
+
+  if [ "$ELAPSED_TIME" -ge "$TIMEOUT" ]; then
+    echo "Таймаут ожидания завершения установки Windows."
+    exit 1
+  fi
+
+  sleep "$CHECK_INTERVAL"
+done
 
 # Настройка SSH доступа к виртуальной машине
 ssh-keygen -t rsa -b 2048 -f ~/.ssh/id_rsa -N ""
 sshpass -p "$RDP_PASS" ssh-copy-id -o StrictHostKeyChecking=no "$RDP_USER@192.168.122.2"
 
-# Настройка RDP на виртуальной машине
-ssh "$RDP_USER@192.168.122.2" <<EOF
-reg add "HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Control\\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
-netsh advfirewall firewall set rule group="remote desktop" new enable=Yes
+# Настройка RDP на виртуальной машине с помощью Ansible
+tee ansible-playbook.yml > /dev/null <<EOF
+---
+- hosts: all
+  tasks:
+    - name: Enable RDP
+      win_feature:
+        name: RDS-RD-Server
+        state: present
 
-# Установка запуска команд с правами администратора без запроса UAC
-reg add "HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System" /v ConsentPromptBehaviorAdmin /t REG_DWORD /d 0 /f
-reg add "HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System" /v EnableLUA /t REG_DWORD /d 0 /f
+    - name: Allow RDP in Firewall
+      win_firewall_rule:
+        name: 'Remote Desktop'
+        enable: yes
+        group: 'remote desktop'
+
+    - name: Set UAC to lowest level
+      win_regedit:
+        path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System
+        name: EnableLUA
+        data: 0
+        type: dword
+      notify: reboot
+
+    - name: Disable UAC prompt for administrators
+      win_regedit:
+        path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System
+        name: ConsentPromptBehaviorAdmin
+        data: 0
+        type: dword
+      notify: reboot
+
+    - name: Reboot the machine to apply changes
+      win_reboot:
+        msg: "Rebooting to apply UAC changes"
+        pre_reboot_delay: 0
+        post_reboot_delay: 30
+        reboot_timeout: 600
+      when: reboot_needed
 EOF
+
+ansible-playbook -i "192.168.122.2," -u "$RDP_USER" --ssh-extra-args='-o StrictHostKeyChecking=no' ansible-playbook.yml
 
 # Настройка общей папки
 mkdir -p "$SHARE_FOLDER"
@@ -105,3 +169,5 @@ sudo systemctl start windows-vm.service
 
 sudo systemctl enable exe-monitor.service
 sudo systemctl start exe-monitor.service
+
+echo "Настройка завершена. Виртуальная машина с Windows готова к использованию."
