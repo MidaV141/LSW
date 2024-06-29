@@ -10,6 +10,7 @@ SHARE_FOLDER="$HOME/shared"
 VM_DISK="$HOME/${VM_NAME}.qcow2"
 CHECK_INTERVAL=60  # Интервал проверки состояния установки в секундах
 TIMEOUT=3600       # Таймаут в секундах (1 час)
+FIXED_IP="192.168.123.10"
 
 # Установка необходимых пакетов
 sudo apt-get update
@@ -18,28 +19,24 @@ sudo apt-get install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-ut
 # Добавление пользователя в группу libvirt
 sudo usermod -aG libvirt $(whoami)
 
-# Настройка сети NAT для виртуальной машины (если не существует)
-if ! virsh net-list --all | grep -q 'default'; then
-    tee /etc/libvirt/qemu/networks/default.xml > /dev/null <<EOL
+# Создание сети с фиксированным IP для виртуальной машины
+sudo tee /etc/libvirt/qemu/networks/fixed_network.xml > /dev/null <<EOL
 <network>
-  <name>default</name>
+  <name>fixed_network</name>
   <forward mode='nat'/>
-  <bridge name='virbr0' stp='on' delay='0'/>
-  <ip address='192.168.122.1' netmask='255.255.255.0'>
+  <bridge name='virbr1' stp='on' delay='0'/>
+  <ip address='192.168.123.1' netmask='255.255.255.0'>
     <dhcp>
-      <range start='192.168.122.2' end='192.168.122.254'/>
+      <host mac='52:54:00:bd:86:21' name='${VM_NAME}' ip='${FIXED_IP}'/>
+      <range start='192.168.123.2' end='192.168.123.254'/>
     </dhcp>
   </ip>
 </network>
 EOL
 
-    virsh net-define /etc/libvirt/qemu/networks/default.xml
-    virsh net-start default
-else
-    echo "Network default already exists"
-fi
-
-virsh net-autostart default
+sudo virsh net-define /etc/libvirt/qemu/networks/fixed_network.xml
+sudo virsh net-start fixed_network
+sudo virsh net-autostart fixed_network
 
 # Создание образа диска для виртуальной машины
 qemu-img create -f qcow2 "$VM_DISK" 50G
@@ -51,24 +48,43 @@ virt-install \
   --vcpus 2 \
   --os-type windows \
   --os-variant win10 \
-  --network network=default \
+  --network network=fixed_network,mac=52:54:00:bd:86:21 \
   --graphics vnc \
   --disk path="$VM_DISK",format=qcow2 \
   --cdrom "$MODIFIED_ISO" \
   --noautoconsole
 
+# Функция для проверки состояния виртуальной машины и её запуска
+check_and_start_vm() {
+  while true; do
+    VM_STATE=$(virsh domstate "$VM_NAME")
+    if [ "$VM_STATE" == "shut off" ]; then
+      echo "Виртуальная машина выключена. Перезапуск..."
+      virsh start "$VM_NAME"
+    elif [ "$VM_STATE" == "running" ]; then
+      echo "Виртуальная машина работает."
+      break
+    fi
+    sleep "$CHECK_INTERVAL"
+  done
+}
+
 # Ожидание завершения установки Windows (максимум 1 час)
 echo "Ожидание завершения установки Windows (до 1 часа)..."
 START_TIME=$(date +%s)
+INSTALL_COMPLETE=false
 
 while true; do
-  # Проверка, что виртуальная машина запущена
-  VM_STATE=$(virsh domstate "$VM_NAME")
-  
-  if [ "$VM_STATE" == "running" ]; then
-    echo "Виртуальная машина все еще устанавливается..."
-  else
-    echo "Установка завершена."
+  check_and_start_vm
+
+  # Удаление старого ключа хоста
+  ssh-keygen -f "$HOME/.ssh/known_hosts" -R "$FIXED_IP"
+
+  # Проверка доступности машины по SSH
+  sshpass -p "$RDP_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$RDP_USER@$FIXED_IP" exit
+  if [ $? -eq 0 ]; then
+    INSTALL_COMPLETE=true
+    echo "Машина доступна по SSH."
     break
   fi
 
@@ -81,15 +97,21 @@ while true; do
     exit 1
   fi
 
+  echo "Ожидание завершения установки Windows..."
   sleep "$CHECK_INTERVAL"
 done
 
-# Настройка SSH доступа к виртуальной машине
-ssh-keygen -t rsa -b 2048 -f ~/.ssh/id_rsa -N ""
-sshpass -p "$RDP_PASS" ssh-copy-id -o StrictHostKeyChecking=no "$RDP_USER@192.168.122.2"
+if [ "$INSTALL_COMPLETE" = true ]; then
+  # Генерация SSH ключей
+  if [ ! -f "$HOME/.ssh/id_rsa" ]; then
+    ssh-keygen -t rsa -b 2048 -N "" -f "$HOME/.ssh/id_rsa"
+  fi
 
-# Настройка RDP на виртуальной машине с помощью Ansible
-tee ansible-playbook.yml > /dev/null <<EOF
+  # Копирование SSH ключа на виртуальную машину
+  sshpass -p "$RDP_PASS" ssh-copy-id -o StrictHostKeyChecking=no -i "$HOME/.ssh/id_rsa.pub" "$RDP_USER@$FIXED_IP"
+
+  # Настройка RDP на виртуальной машине с помощью Ansible
+  tee ansible-rdp.yml > /dev/null <<EOF
 ---
 - hosts: all
   tasks:
@@ -129,14 +151,29 @@ tee ansible-playbook.yml > /dev/null <<EOF
       when: reboot_needed
 EOF
 
-ansible-playbook -i "192.168.122.2," -u "$RDP_USER" --ssh-extra-args='-o StrictHostKeyChecking=no' ansible-playbook.yml
+  # Использование пароля при подключении Ansible
+  ANSIBLE_PASSWORD_FILE=$(mktemp)
+  echo -n "$RDP_PASS" > "$ANSIBLE_PASSWORD_FILE"
 
-# Настройка общей папки
-mkdir -p "$SHARE_FOLDER"
-sudo mount -t 9p -o trans=virtio,version=9p2000.L,rw,cache=none hostshare "$SHARE_FOLDER"
+  ANSIBLE_CONFIG_FILE=$(mktemp)
+  tee "$ANSIBLE_CONFIG_FILE" > /dev/null <<EOF
+[defaults]
+host_key_checking = False
+ansible_user = $RDP_USER
+ansible_ssh_pass = $RDP_PASS
+ansible_ssh_private_key_file = $HOME/.ssh/id_rsa
+EOF
 
-# Создание и активация служб systemd
-sudo tee /etc/systemd/system/windows-vm.service > /dev/null <<EOL
+  ANSIBLE_HOSTS_FILE=$(mktemp)
+  echo "$FIXED_IP ansible_password=$RDP_PASS" > "$ANSIBLE_HOSTS_FILE"
+
+  ANSIBLE_CONFIG="$ANSIBLE_CONFIG_FILE" ansible-playbook -i "$ANSIBLE_HOSTS_FILE" ansible-rdp.yml
+
+  # Настройка общей папки
+  sudo mount -t 9p -o trans=virtio,version=9p2000.L,rw,cache=none hostshare "$SHARE_FOLDER"
+
+  # Создание и активация служб systemd
+  sudo tee /etc/systemd/system/windows-vm.service > /dev/null <<EOL
 [Unit]
 Description=Windows VM Service
 After=network.target
@@ -151,7 +188,7 @@ Restart=always
 WantedBy=multi-user.target
 EOL
 
-sudo tee /etc/systemd/system/exe-monitor.service > /dev/null <<EOL
+  sudo tee /etc/systemd/system/exe-monitor.service > /dev/null <<EOL
 [Unit]
 Description=Monitor new exe files and handle them
 
@@ -164,10 +201,11 @@ Restart=always
 WantedBy=multi-user.target
 EOL
 
-sudo systemctl enable windows-vm.service
-sudo systemctl start windows-vm.service
+  sudo systemctl enable windows-vm.service
+  sudo systemctl start windows-vm.service
 
-sudo systemctl enable exe-monitor.service
-sudo systemctl start exe-monitor.service
+  sudo systemctl enable exe-monitor.service
+  sudo systemctl start exe-monitor.service
 
-echo "Настройка завершена. Виртуальная машина с Windows готова к использованию."
+  echo "Настройка завершена. Виртуальная машина с Windows готова к использованию."
+fi
