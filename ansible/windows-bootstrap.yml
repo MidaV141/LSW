@@ -1,0 +1,26 @@
+---
+- name: Prepare Windows VM for remote access
+  hosts: windows
+  gather_facts: no
+  vars:
+    remote_apps_dir: "{{ lookup('env', 'REMOTE_APPS_DIR') | default('C:\\LSW\\Apps') }}"
+  tasks:
+    - name: Ensure Remote Desktop is enabled
+      ansible.windows.win_regedit:
+        path: HKLM:\System\CurrentControlSet\Control\Terminal Server
+        name: fDenyTSConnections
+        data: 0
+        type: dword
+
+    - name: Allow Remote Desktop through the firewall
+      ansible.windows.win_shell: Enable-NetFirewallRule -DisplayGroup 'Remote Desktop'
+
+    - name: Permit Basic authentication for WinRM (for initial provisioning)
+      ansible.windows.win_shell: |
+        winrm set winrm/config/service/auth '@{Basic="true"}'
+        winrm set winrm/config/service '@{AllowUnencrypted="true"}'
+
+    - name: Ensure application staging directory exists
+      ansible.windows.win_file:
+        path: "{{ remote_apps_dir }}"
+        state: directory

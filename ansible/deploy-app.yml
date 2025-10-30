@@ -1,0 +1,28 @@
+---
+- name: Deploy Windows executable through WinRM
+  hosts: windows
+  gather_facts: no
+  vars:
+    app_source: "{{ lookup('env', 'APP_SOURCE') }}"
+    app_name: "{{ lookup('env', 'APP_NAME') }}"
+    remote_apps_dir: "{{ lookup('env', 'REMOTE_APPS_DIR') | default('C:\\LSW\\Apps') }}"
+  tasks:
+    - name: Ensure source path is provided
+      ansible.builtin.assert:
+        that:
+          - app_source is not none
+          - app_source != ''
+          - app_name is not none
+          - app_name != ''
+        fail_msg: "APP_SOURCE and APP_NAME environment variables must be provided"
+
+    - name: Copy application binary to Windows VM
+      ansible.windows.win_copy:
+        src: "{{ app_source }}"
+        dest: "{{ remote_apps_dir }}\\{{ app_name }}"
+
+    - name: Launch application in user session
+      ansible.windows.win_shell: |
+        Start-Process -FilePath "{{ remote_apps_dir }}\\{{ app_name }}" -WorkingDirectory "{{ remote_apps_dir }}" -WindowStyle Normal
+      async: 0
+      poll: 0
