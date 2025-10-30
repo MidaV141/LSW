@@ -1,12 +1,15 @@
 [Unit]
-Description=Windows VM autostart
+Description=Windows VM Service
 After=network.target
+Requires=libvirtd.service
 
 [Service]
-Type=forking
-ExecStart=/usr/bin/virsh start windows-vm
-ExecStop=/usr/bin/virsh shutdown windows-vm
+Type=oneshot
 RemainAfterExit=yes
+ExecStart=/usr/bin/virsh start --domain windows-vm --quiet
+ExecStop=/usr/bin/virsh shutdown --domain windows-vm
+ExecStopPost=/bin/sh -c '/usr/bin/virsh domstate windows-vm 2>/dev/null | grep -q running && /usr/bin/virsh destroy windows-vm'
+TimeoutStopSec=120
 
 [Install]
 WantedBy=multi-user.target

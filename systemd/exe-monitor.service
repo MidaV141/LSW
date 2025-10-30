@@ -1,11 +1,16 @@
 [Unit]
-Description=Monitor new exe files and handle them
+Description=Monitor new Windows executables and deploy them
 After=network.target windows-vm.service
 
 [Service]
 Type=simple
-ExecStart=/path/to/your/main.sh
-Restart=always
+User=%i
+Group=%i
+WorkingDirectory=%h/LSW
+Environment="ANSIBLE_CONFIG=%h/LSW/.ansible/ansible.cfg"
+Environment="PATH=%h/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ExecStart=/usr/bin/env bash %h/LSW/main.sh
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
